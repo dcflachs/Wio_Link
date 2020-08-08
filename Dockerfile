@@ -3,7 +3,7 @@ MAINTAINER Jack Shao "jacky.shaoxg@gmail.com"
 
 #install required packages
 RUN apt-get update && \
-    apt-get install -qqy --force-yes wget openssl python-dev python-pip supervisor vim git
+    apt-get install -qqy --force-yes wget openssl python3 python3-pip supervisor vim git
 
 #get the toolchain
 WORKDIR /opt
@@ -16,12 +16,12 @@ RUN tar -zxvf xtensa.tar.gz
 ENV PATH /opt/xtensa-lx106-elf/bin:$PATH
 
 
-RUN pip install 'tornado<5'
-RUN pip install PyJWT
-RUN pip install pycrypto
-RUN pip install PyYaml
-RUN pip install tornado-cors
-RUN pip install psutil
+RUN pip3 install 'tornado<5'
+RUN pip3 install PyJWT
+RUN pip3 install pycrypto
+RUN pip3 install PyYaml
+RUN pip3 install tornado-cors
+RUN pip3 install psutil
 
 #add the files into image
 RUN mkdir -p /root/wio
@@ -30,7 +30,7 @@ COPY . /root/wio
 #this is for marina.io builder
 RUN git submodule init || true
 RUN git submodule update || true
-RUN python ./scan_drivers.py
+RUN python3 ./scan_drivers.py
 RUN mv ./update.sh ../update.sh
 RUN chmod a+x ../update.sh
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #   Copyright (C) 2015 by seeedstudio
 #   Author: Jack Shao (jacky.shaoxg@gmail.com)

@@ -32,5 +32,5 @@ else
     rm -rf ./grove_drivers/grove_example
 fi
 
-python ./scan_drivers.py
+python3 ./scan_drivers.py
 supervisorctl start esp8266
