@@ -320,7 +320,7 @@ class DeviceConnection(object):
                             self.recv_msg = json_obj
                             self.recv_msg_cond.notify()
                             yield gen.moment
-                    except Exception,e:
+                    except Exception as e:
                         gen_log.warn("Node %s: %s" % (self.node_id,str(e)))
 
             except iostream.StreamClosedError:
@@ -329,7 +329,7 @@ class DeviceConnection(object):
                 return
             except ValueError:
                 gen_log.warn("Node %s: %s can not be decoded into json" % (self.node_id, piece))
-            except Exception,e:
+            except Exception as e:
                 gen_log.error("Node %s: %s" % (self.node_id,str(e)))
                 self.kill_myself()
                 return
@@ -436,7 +436,7 @@ class DeviceConnection(object):
                 raise gen.Return((False, {"status":500, "msg":"unexpected error 1"}))
         except gen.Return:
             raise
-        except Exception,e:
+        except Exception as e:
             gen_log.error(e)
             raise gen.Return((False, {"status":500, "msg":"Node %s: %s" % (self.node_id, str(e))}))
         finally:
@@ -614,7 +614,7 @@ class NodeReadWriteHandler(NodeBaseHandler):
                         self.resp(200,meta=resp['msg'])
                 except web.HTTPError:
                     raise
-                except Exception,e:
+                except Exception as e:
                     gen_log.error(e)
                 return
         self.resp(404, "Node is offline")
@@ -652,7 +652,7 @@ class NodeReadWriteHandler(NodeBaseHandler):
                         self.resp(200,meta=resp['msg'])
                 except web.HTTPError:
                     raise
-                except Exception,e:
+                except Exception as e:
                     gen_log.error(e)
                 return
 
@@ -679,9 +679,9 @@ class NodeFunctionHandler(NodeReadWriteHandler):
         arg = None
         try:
             arg = self.get_body_argument('arg')
-            print arg
+            print(arg)
             arg = base64.b64encode(arg)
-            print arg
+            print(arg)
         except web.MissingArgumentError:
             self.resp(400, "Missing function's argument - arg")
             return
@@ -707,7 +707,7 @@ class NodeFunctionHandler(NodeReadWriteHandler):
                         self.resp(200,meta=resp['msg'])
                 except web.HTTPError:
                     raise
-                except Exception,e:
+                except Exception as e:
                     gen_log.error(e)
                 return
         self.resp(404, "Node is offline")
@@ -831,7 +831,7 @@ def fetch_node_info():
             else:
                 list_result_obj = r.json()
 
-        except requests.exceptions.HTTPError,e:
+        except requests.exceptions.HTTPError as e:
             gen_log.error(e)
             return False
 
@@ -886,7 +886,7 @@ def get_all_token():
                 else:
                     login_result_obj = r.json()
 
-            except requests.exceptions.HTTPError,e:
+            except requests.exceptions.HTTPError as e:
                 gen_log.error(e)
                 return False
 

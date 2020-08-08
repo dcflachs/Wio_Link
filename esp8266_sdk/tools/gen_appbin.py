@@ -42,7 +42,7 @@ blocks = 0
 
 def write_file(file_name,data):
 	if file_name is None:
-		print 'file_name cannot be none\n'
+		print('file_name cannot be none\n')
 		sys.exit(0)
 
 	fp = open(file_name,'ab')
@@ -52,13 +52,13 @@ def write_file(file_name,data):
 		fp.write(data)
 		fp.close()
 	else:
-		print '%s write fail\n'%(file_name)
+		print('%s write fail\n'%(file_name))
 
 def combine_bin(file_name,dest_file_name,start_offset_addr,need_chk):
     global chk_sum
     global blocks
     if dest_file_name is None:
-        print 'dest_file_name cannot be none\n'
+        print('dest_file_name cannot be none\n')
         sys.exit(0)
 
     if file_name:
@@ -92,7 +92,7 @@ def combine_bin(file_name,dest_file_name,start_offset_addr,need_chk):
                 blocks = blocks + 1
         	fp.close()
         else:
-        	print '!!!Open %s fail!!!'%(file_name)
+        	print('!!!Open %s fail!!!'%(file_name))
 
 
 def getFileCRC(_path): 
@@ -106,7 +106,7 @@ def getFileCRC(_path):
             str = f.read(blocksize) 
         f.close() 
     except: 
-        print 'get file crc error!' 
+        print('get file crc error!') 
         return 0 
     return crc
 
@@ -115,7 +115,7 @@ def gen_appbin():
     global crc_sum
     global blocks
     if len(sys.argv) != 7:
-        print 'Usage: gen_appbin.py eagle.app.out boot_mode flash_mode flash_clk_div flash_size_map'
+        print('Usage: gen_appbin.py eagle.app.out boot_mode flash_mode flash_clk_div flash_size_map')
         sys.exit(0)
 
     elf_file = sys.argv[1]
@@ -124,7 +124,7 @@ def gen_appbin():
     flash_clk_div = sys.argv[4]
     flash_size_map = sys.argv[5]
     user_bin = sys.argv[6]
-    print '!!!user bin  %s  !!!'%(sys.argv[6])
+    print('!!!user bin  %s  !!!'%(sys.argv[6]))
     flash_data_line  = 16
     data_line_bits = 0xf
 
@@ -148,7 +148,7 @@ def gen_appbin():
 
     fp = file('./eagle.app.sym')
     if fp is None:
-        print "open sym file error\n"
+        print("open sym file error\n")
         sys.exit(0)
 
     lines = fp.readlines()
@@ -163,7 +163,7 @@ def gen_appbin():
             # print entry_addr
 
     if entry_addr is None:
-        print 'no entry point!!'
+        print('no entry point!!')
         sys.exit(0)
 
     data_start_addr = '0'
@@ -215,16 +215,16 @@ def gen_appbin():
     if boot_mode == '2':
         # write irom bin head
         #data_bin = struct.pack('<BBBBI',BIN_MAGIC_IROM,4,byte2,byte3,long(entry_addr,16))
-        data_bin = struct.pack('<BBBBI',BIN_MAGIC_IROM,4,0,app,long(entry_addr,16))
+        data_bin = struct.pack('<BBBBI',BIN_MAGIC_IROM,4,0,app,int(entry_addr,16))
         sum_size = len(data_bin)
         write_file(flash_bin_name,data_bin)
         
         # irom0.text.bin
         combine_bin(irom0text_bin_name,flash_bin_name,0x0,0)
     if boot_mode == '1':
-         data_bin = struct.pack('<BBBBI',BIN_MAGIC_FLASH,3,0,app,long(entry_addr,16))
+         data_bin = struct.pack('<BBBBI',BIN_MAGIC_FLASH,3,0,app,int(entry_addr,16))
     else:
-         data_bin = struct.pack('<BBBBI',BIN_MAGIC_FLASH,3,byte2,byte3,long(entry_addr,16))
+         data_bin = struct.pack('<BBBBI',BIN_MAGIC_FLASH,3,byte2,byte3,int(entry_addr,16))
     sum_size = len(data_bin)
     write_file(flash_bin_name,data_bin)
 
@@ -233,10 +233,10 @@ def gen_appbin():
 
     # data.bin
     if data_start_addr:
-        combine_bin(data_bin_name,flash_bin_name,long(data_start_addr,16),1)
+        combine_bin(data_bin_name,flash_bin_name,int(data_start_addr,16),1)
 
     # rodata.bin
-    combine_bin(rodata_bin_name,flash_bin_name,long(rodata_start_addr,16),1)
+    combine_bin(rodata_bin_name,flash_bin_name,int(rodata_start_addr,16),1)
 
     # write checksum header
     sum_size = os.path.getsize(flash_bin_name) + 1
@@ -259,7 +259,7 @@ def gen_appbin():
             write_file(flash_bin_name,data_bin)
             fp.close()
         else :
-            print '!!!Open %s fail!!!'%(flash_bin_name)
+            print('!!!Open %s fail!!!'%(flash_bin_name))
             sys.exit(0)
     if boot_mode == '1' or boot_mode == '2':
         all_bin_crc = getFileCRC(flash_bin_name)

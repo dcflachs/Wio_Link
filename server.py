@@ -315,7 +315,7 @@ class DeviceConnection(object):
                             self.recv_msg = json_obj
                             self.recv_msg_cond.notify()
                             yield gen.moment
-                    except Exception, e:
+                    except Exception as e:
                         gen_log.warn("Node %s: %s" % (self.node_id ,str(e)))
 
             except iostream.StreamClosedError:
@@ -324,7 +324,7 @@ class DeviceConnection(object):
                 return
             except ValueError:
                 gen_log.warn("Node %s: %s can not be decoded into json" % (self.node_id, piece))
-            except Exception,e:
+            except Exception as e:
                 gen_log.error("Node %s: %s" % (self.node_id ,str(e)))
                 self.kill_myself()
                 return
@@ -412,7 +412,7 @@ class DeviceConnection(object):
                 raise gen.Return((False, {"status":500, "msg":"unexpected error 1"}))
         except gen.Return:
             raise
-        except Exception,e:
+        except Exception as e:
             gen_log.error(e)
             raise gen.Return((False, {"status":500, "msg":"Node %s: %s" % (self.node_id, str(e))}))
         finally:
@@ -586,7 +586,7 @@ def main():
                 gen_log.info("Creating Database in: %s" % database_path)
                 try:
                     shutil.copyfile('database.db',database_path)
-                except OSError, e:
+                except OSError as e:
                     gen_log.error(e)
             else:
                 gen_log.error("Unable to locate default database")
@@ -607,7 +607,7 @@ def main():
         cur.execute('SELECT SQLITE_VERSION()')
         data = cur.fetchone()
         gen_log.info("SQLite version: %s" % data[0])
-    except lite.Error, e:
+    except lite.Error as e:
         gen_log.error(e)
         sys.exit(1)
 
