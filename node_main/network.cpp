@@ -1532,6 +1532,7 @@ void network_status_indicate_timer_fn(void *arg)
         digitalWrite(STATUS_LED, 0);
         break;
     case CONNECTED:
+        should_enter_user_loop = true;
     case KEEP_ALIVE:
         os_timer_arm(&timer_network_status_indicate[0], 1000, false);
         digitalWrite(STATUS_LED, ~digitalRead(STATUS_LED));
