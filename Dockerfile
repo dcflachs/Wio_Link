@@ -3,7 +3,8 @@ MAINTAINER Jack Shao "jacky.shaoxg@gmail.com"
 
 #install required packages
 RUN apt-get update && \
-    apt-get install -qqy --force-yes wget openssl python3 python3-pip supervisor vim git
+    apt-get install -qqy --force-yes --no-install-recommends wget openssl gcc make python3-dev python3-pip supervisor vim git && \
+    rm -rf /var/lib/apt/lists/*
 
 #get the toolchain
 WORKDIR /opt
@@ -15,7 +16,7 @@ RUN /bin/bash -c "if dpkg --print-architecture | grep -q -e x86 -e amd ; then \
 RUN tar -zxvf xtensa.tar.gz
 ENV PATH /opt/xtensa-lx106-elf/bin:$PATH
 
-
+RUN pip3 install setuptools
 RUN pip3 install 'tornado<5'
 RUN pip3 install PyJWT
 RUN pip3 install pycrypto
