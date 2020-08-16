@@ -50,6 +50,7 @@ from tornado.locks import Semaphore, Condition
 
 import config as server_config
 from handlers import *
+from handlers_v2 import *
 from cache import *
 from coroutine_msgbus import *
 
@@ -483,6 +484,10 @@ class DeviceServer(TCPServer):
 class myApplication(web.Application):
 
     def __init__(self,db_conn,cursor):
+        self.conn = db_conn
+        self.cur = cursor
+        self.v2_state = V2HandlersState(self.cur, DeviceServer.accepted_xchange_conns)
+
         handlers = [
         (r"/v1[/]?", IndexHandler),
         (r"/v1/test[/]?", TestHandler),
@@ -509,10 +514,8 @@ class myApplication(web.Application):
         (r"/v1/ota/trigger[/]?", FirmwareBuildingHandler, dict(conns=DeviceServer.accepted_ota_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened)),
         (r"/v1/ota/status[/]?", OTAStatusReportingHandler, dict(conns=DeviceServer.accepted_ota_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened)),
         (r"/v1/cotf/(project)[/]?", COTFHandler, dict(conns=DeviceServer.accepted_ota_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened)),
+        (r"/v2/node/(?=.well-known)(.+)", NodeV2WellKnownHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
         ]
-
-        self.conn = db_conn
-        self.cur = cursor
 
         auto_reload_for_debug = False
         try:
