@@ -516,6 +516,7 @@ class myApplication(web.Application):
         (r"/v1/cotf/(project)[/]?", COTFHandler, dict(conns=DeviceServer.accepted_ota_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened)),
         (r"/v2/node/(?=.well-known)(.+)", NodeV2WellKnownHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
         (r"/v2/node/(?!event|config|resources|setting|function|.well-known)(.+)", NodeV2WriteHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
+        (r"/v2/node/event/(?=pop|length|clear)(.+)", NodeV2EventsHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
         ]
 
         auto_reload_for_debug = False

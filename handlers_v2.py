@@ -20,6 +20,7 @@ import time
 import smtplib
 import traceback
 import config as server_config
+import collections
 
 from tornado.httpserver import HTTPServer
 from tornado.tcpserver import TCPServer
@@ -43,10 +44,13 @@ class V2HandlersState():
     def __init__(self, cur, conns):
         self.well_known = {}
         self.write_cache = {}
+        self.events_cache = {}
         self.v2_listener = V2Listener(self, cur, conns)
 
 
 class V2Listener():
+    EVENT_QUEUE_LENGTH = 50
+
     def __init__(self, state, cur, conns):
         self.db_cur = cur
         self.v2_state = state
@@ -56,6 +60,7 @@ class V2Listener():
         for row in rows:
             self.well_known_subscriber(row["user_id"])
             self.queued_write_subscriber(row["user_id"])
+            self.events_subscriber(row["user_id"])
 
     @gen.coroutine
     def well_known_subscriber(self, user_id):
@@ -141,6 +146,20 @@ class V2Listener():
                     except Exception,e:
                         gen_log.error(e)
         raise gen.Return(result_ok)
+
+    @gen.coroutine
+    def events_subscriber(self, user_id):
+        event_q = CoEventBus().listener('/event/users/{}'.format(user_id)).create_queue()
+        while True:
+            event = yield event_q.get()
+            if (event and 
+                event["event_type"] == "grove"):
+                node_sn = event["node_sn"]
+                if not node_sn in self.v2_state.events_cache:
+                    self.v2_state.events_cache[node_sn] = collections.deque(maxlen=self.EVENT_QUEUE_LENGTH)
+                self.v2_state.events_cache[node_sn].append(event)
+                
+                
 
 class NodeV2WellKnownHandler(NodeBaseHandler):
 
@@ -288,3 +307,91 @@ class NodeV2WriteHandler(NodeBaseHandler):
         self.write_cache[node_sn][base_uri] = cmd
         gen_log.info('INFO: V2 POST {}'.format(msg))
         self.resp(200, msg)
+
+class NodeV2EventsHandler(NodeBaseHandler):
+
+    def initialize (self, conns, state_waiters, state_happened, state_cached):
+        self.conns = conns
+        self.state_waiters = state_waiters
+        self.state_happened = state_happened
+        self.events_cache = state_cached.events_cache
+
+    # Handles GET /v2/node/event/pop
+    #         GET /v2/node/event/length
+    #         POST /v2/node/event/clear
+
+    @gen.coroutine
+    def pre_request(self, req_type, uri):
+        if req_type == 'get':
+            if 'pop' in uri or 'length' in uri:
+                return True
+        elif req_type == 'post':
+            if 'clear' in uri:
+                return True
+
+        return False
+
+    @gen.coroutine
+    def post_request(self, req_type, uri, resp):
+        pass
+
+    @gen.coroutine
+    def get(self, uri):
+
+        uri = uri.split("?")[0]
+        gen_log.debug("get: "+ str(uri))
+
+        node = self.get_node()
+        if not node:
+            return
+        self.node = node
+
+        if not self.pre_request('get', uri):
+            return
+
+        node_sn = node['node_sn']
+        if node_sn in self.events_cache:
+            if 'length' in uri.split("\\")[0]:
+                length = len(self.events_cache[node_sn])
+                self.resp(200,meta={'length':length})
+                return
+            elif 'pop' in uri.split("\\")[0]:
+                if len(self.events_cache[node_sn]) > 0:
+                    event = self.events_cache[node_sn].popleft()
+                    self.resp(200,meta=event)
+                    return
+                else:
+                    self.resp(204,"Queue Empty")
+                    return 
+            else:
+                self.resp(404, "Unknown Endpoint")
+                return
+
+        self.resp(404, "Node Unknown")
+
+    @gen.coroutine
+    def post (self, uri):
+
+        uri = uri.split("?")[0].rstrip("/")
+        gen_log.info("post to: "+ str(uri))
+
+        node = self.get_node()
+        if not node:
+            return
+        self.node = node
+
+        if self.request.headers.get("content-type") and self.request.headers.get("content-type").find("json") > 0:
+            self.resp(400, "Can not accept application/json post request.")
+            return
+
+        if not self.pre_request('post', uri):
+            return
+
+        node_sn = node['node_sn']
+        if node_sn in self.events_cache:
+            self.events_cache[node_sn].clear()
+            self.resp(200,"Success")
+            return
+
+        self.resp(404, "Node Unknown")
+    
