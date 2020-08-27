@@ -152,6 +152,7 @@ class V2Listener():
         event_q = CoEventBus().listener('/event/users/{}'.format(user_id)).create_queue()
         while True:
             event = yield event_q.get()
+            event['timestamp'] = datetime.now().isoformat()
             if (event and 
                 event["event_type"] == "grove"):
                 node_sn = event["node_sn"]
