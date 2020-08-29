@@ -486,7 +486,12 @@ class myApplication(web.Application):
     def __init__(self,db_conn,cursor):
         self.conn = db_conn
         self.cur = cursor
-        self.v2_state = V2HandlersState(self.cur, DeviceServer.accepted_xchange_conns)
+
+        use_v2_api = False
+        try:
+            use_v2_api = server_config.use_v2_api
+        except:
+            pass
 
         handlers = [
         (r"/v1[/]?", IndexHandler),
@@ -514,10 +519,15 @@ class myApplication(web.Application):
         (r"/v1/ota/trigger[/]?", FirmwareBuildingHandler, dict(conns=DeviceServer.accepted_ota_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened)),
         (r"/v1/ota/status[/]?", OTAStatusReportingHandler, dict(conns=DeviceServer.accepted_ota_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened)),
         (r"/v1/cotf/(project)[/]?", COTFHandler, dict(conns=DeviceServer.accepted_ota_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened)),
-        (r"/v2/node/(?=.well-known)(.+)", NodeV2WellKnownHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
-        (r"/v2/node/(?!event|config|resources|setting|function|.well-known)(.+)", NodeV2WriteHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
-        (r"/v2/node/event/(?=pop|length|clear)(.+)", NodeV2EventsHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
         ]
+
+        if use_v2_api:
+            self.v2_state = V2HandlersState(self.cur, DeviceServer.accepted_xchange_conns)
+            handlers = handlers + [
+            (r"/v2/node/(?=.well-known)(.+)", NodeV2WellKnownHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
+            (r"/v2/node/(?!event|config|resources|setting|function|.well-known)(.+)", NodeV2WriteHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
+            (r"/v2/node/event/(?=pop|length|clear)(.+)", NodeV2EventsHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
+            ]
 
         auto_reload_for_debug = False
         try:

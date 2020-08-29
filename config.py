@@ -31,3 +31,7 @@ auto_reload_for_debug = False
 # The secrect for external user login
 ext_user_secret = 'secret'
 
+
+###############################
+# Enable v2 api
+use_v2_api = ("WIO_USE_V2_API" in os.environ)

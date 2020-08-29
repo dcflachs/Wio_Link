@@ -801,12 +801,22 @@ class NodeEventHandler(websocket.WebSocketHandler):
 class myApplication(web.Application):
 
     def __init__(self):
+        use_v2_api = ("WIO_USE_V2_API" in os.environ)
+
         handlers = [
         (r"/v1[/]?", IndexHandler, dict(conns=None)),
         (r"/v1/node/(?!event|config|resources|setting|function)(.+)", NodeReadWriteHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened)),
         (r"/v1/node/(?=function)(.+)", NodeFunctionHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened)),
         (r"/v1/node/event[/]?", NodeEventHandler,dict(conns=DeviceServer.accepted_xchange_conns)),
         ]
+
+        if use_v2_api:
+            self.v2_state = V2HandlersState(self.cur, DeviceServer.accepted_xchange_conns)
+            handlers = handlers + [
+            (r"/v2/node/(?=.well-known)(.+)", NodeV2WellKnownHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
+            (r"/v2/node/(?!event|config|resources|setting|function|.well-known)(.+)", NodeV2WriteHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
+            (r"/v2/node/event/(?=pop|length|clear)(.+)", NodeV2EventsHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
+            ]
 
         web.Application.__init__(self, handlers, debug=False)
 
