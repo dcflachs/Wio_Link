@@ -29,7 +29,7 @@ import hashlib
 import base64
 import httplib
 import uuid
-from shutil import copy
+from shutil import copy, rmtree
 from build_firmware import *
 import yaml
 import threading
@@ -1371,6 +1371,8 @@ class FirmwareBuildingHandler(NodeBaseHandler):
 
         phase = self.get_argument("build_phase","")
         build_phase = [1,2]
+        if phase == '0':
+            build_phase = [0]
         if phase == '1':
             build_phase = [1]
         elif phase == '2':
@@ -1384,6 +1386,9 @@ class FirmwareBuildingHandler(NodeBaseHandler):
         json_connections = None
         json_drivers = None
 
+        if 0 in build_phase:
+            #Clean Build Directory
+            rmtree('%s/'%user_build_dir)
         if 1 in build_phase:
             if self.request.headers.get("content-type") and self.request.headers.get("content-type").find("json") > 0:
                 #try json first
