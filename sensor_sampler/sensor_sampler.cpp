@@ -5,69 +5,117 @@
  */
 
 #include "sensor_sampler.h"
-#include "rpc_stream.h"
 #include "wio.h"
-#include "Arduino.h"
 
-#define SENSOR_SAMPLER_START_DELAY_MS 500
+#define SENSOR_SAMPLER_START_DELAY_MS 4000
 #define SENSOR_SAMPLER_SAMPLE_DELAY_MS 100
+#define SENSOR_SAMPLER_SLEEP_DELAY_MS 300
 
-extern resource_t *p_first_resource;
+static void timer_handler(void * data)
+{
+    SensorSampler * p_sampler = (SensorSampler *) data;
+    if(p_sampler == NULL)
+        return;
 
-static void timer_handler(void *para);
+    if(p_sampler->enabled)
+    {
+        p_sampler->sample();
+    }
+}
+
+static void sleep_timer_handler(void * data)
+{
+
+}
 
 SensorSampler::SensorSampler()
 {
-    this->allow_sleep = true;
     this->timer = (TIMER_T *)malloc(sizeof(TIMER_T));
+    this->p_first_resource = NULL;
+    this->p_last_resource = NULL;
     this->p_current_resource = NULL;
+    this->allow_sleep = true;
+    this->enabled = true;
 
     wio.registerVar("allow_sleep", this->allow_sleep);
-
-    // wio.postEvent("sensor_sampler_start", true);
-    suli_soft_timer_install(timer, SENSOR_SAMPLER_START_DELAY_MS, timer_handler, this, true);
+    wio.registerVar("sampler_enabled", this->enabled);
 }
 
-void SensorSampler::_sample_function(void)
+void SensorSampler::start_sampling(void)
 {
-    if(this->p_current_resource == NULL)
+    if(this->p_first_resource != NULL)
     {
-        if(p_first_resource)
-        {
-            this->p_current_resource = p_first_resource;
-            suli_soft_timer_control_interval(timer, SENSOR_SAMPLER_SAMPLE_DELAY_MS);
-        }
-        else
-        {
-            timer->repeat = false;
-            return;
-        }
+        this->p_current_resource = this->p_first_resource;
+        suli_soft_timer_install(this->timer, SENSOR_SAMPLER_START_DELAY_MS, timer_handler, this, true);
+        wio.postEvent("Sensor Sampler State", "Start");
     }
+}
 
-    //TODO
-    if(p_current_resource->rw == METHOD_READ)
+void SensorSampler::sample(void)
+{
+    if((this->p_current_resource != NULL) && (this->enabled))
     {
-        wio.postEvent("sample_grove_name", p_current_resource->grove_name);
-        wio.postEvent("sample_value_name", p_current_resource->method_name);
-        // switch(p_current_resource->arg_types)
-    }
+        if(this->p_current_resource != NULL)
+        {
+            //Do the start_sampling
+            // wio.postEvent("Sensor Sampler State", "Sample");
+            wio.postEvent("sensor_sampler_grove", this->p_current_resource->grove_name);
+            this->p_current_resource->method_ptr(this->p_current_resource->class_ptr);
+        }
 
-    if(this->p_current_resource->next != NULL)
-    {
-        this->p_current_resource = this->p_current_resource->next;
+        if(this->p_current_resource == this->p_first_resource)
+            suli_soft_timer_control_interval(this->timer, SENSOR_SAMPLER_SAMPLE_DELAY_MS);
+        else if(this->p_current_resource == this->p_last_resource)
+            suli_soft_timer_control_interval(this->timer, SENSOR_SAMPLER_SLEEP_DELAY_MS);
+
+        this->p_current_resource = this->p_current_resource->next;  
     }
     else
     {
-        this->p_current_resource = NULL;
-        timer->repeat = false;
+        this->timer->repeat = false;
+        wio.postEvent("sensor_sampler_uptime", (uint32_t)millis());
 
-        uint32_t time = millis();
-        wio.postEvent("sensor_sampler_uptime", time);
+        wio.postEvent("sensor_sampler_allow_sleep", this->allow_sleep);
+        if(this->allow_sleep)
+        {
+            //TODO sleep
+        }
     }
 }
 
-static void timer_handler(void *para)
+void SensorSampler::register_resource(sampler_func_t func, void * class_ptr, char * grove_name, bool last)
 {
-    SensorSampler *g = (SensorSampler *)para;
-    g->_sample_function();
+    sample_resource_t * p_res = (sample_resource_t *) malloc(sizeof(sample_resource_t));
+    if(p_res == NULL) return;
+
+    p_res->class_ptr = class_ptr;
+    p_res->grove_name = grove_name;
+    p_res->method_ptr = func;
+    p_res->next = NULL;
+
+    if(this->p_first_resource == NULL)
+    {
+        this->p_first_resource = p_res;
+        this->p_last_resource = p_res;
+    }
+    else if(last)
+    {
+        this->p_last_resource->next = p_res;
+        this->p_last_resource = p_res;
+    }
+    else
+    {
+        p_res->next = this->p_first_resource;
+        this->p_first_resource = p_res;
+    }
+}
+
+void SensorSampler::register_start_resource(sampler_func_t func, void * class_ptr, char * grove_name)
+{
+    this->register_resource(func, class_ptr, grove_name, false);
+}
+
+void SensorSampler::register_end_resource(sampler_func_t func, void * class_ptr, char * grove_name)
+{
+    this->register_resource(func, class_ptr, grove_name, true);
 }

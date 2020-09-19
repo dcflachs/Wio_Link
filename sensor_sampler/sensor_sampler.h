@@ -7,21 +7,39 @@
 #define __SENSOR_SAMPLER_H__
 
 #include "suli2.h"
-#include "rpc_server.h"
+
+typedef bool (*sampler_func_t)(void * class_ptr);
+
+typedef struct sample_resource_s
+{
+    char               *grove_name;
+    sampler_func_t      method_ptr;
+    void               *class_ptr;
+
+    struct sample_resource_s  *next;
+}sample_resource_t;
 
 class SensorSampler
 {
 public:
     SensorSampler();
 
-    void _sample_function(void);
+    void register_start_resource(sampler_func_t func, void * class_ptr, char * grove_name);
+    void register_end_resource(sampler_func_t func, void * class_ptr, char * grove_name);
+
+
+    void start_sampling(void);
+    void sample(void);
 
     bool allow_sleep;
+    bool enabled;
+
 private:
     TIMER_T *timer;
-    resource_t *p_current_resource;
+    sample_resource_t * p_first_resource;
+    sample_resource_t * p_last_resource;
+    sample_resource_t * p_current_resource;
+    void register_resource(sampler_func_t func, void * class_ptr, char * grove_name, bool last);
 };
-
-static void SensorSampler_register(void);
 
 #endif
