@@ -31,6 +31,7 @@ public:
     void start_sampling(void);
     void sample(void);
 
+    uint32_t sleep_time;
     bool allow_sleep;
     bool enabled;
 
@@ -40,6 +41,7 @@ private:
     sample_resource_t * p_last_resource;
     sample_resource_t * p_current_resource;
     void register_resource(sampler_func_t func, void * class_ptr, char * grove_name, bool last);
+    bool ready_sleep;
 };
 
 #endif
