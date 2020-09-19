@@ -82,3 +82,14 @@ void __grove_m5unit_env2_sampler_read_altitude(void * class_ptr)
         wio.postEvent("sensor_sampler_status", "failed");
     }
 }
+
+void __grove_m5unit_env2_sampler_register(void * sampler_ptr, void * class_ptr, char * grove_name)
+{
+    SensorSampler *sampler = (SensorSampler *)sampler_ptr;
+
+    sampler->register_last_resource(__grove_m5unit_env2_sampler_read_temperature_barom, class_ptr, grove_name);
+    sampler->register_last_resource(__grove_m5unit_env2_sampler_read_pressure, class_ptr, grove_name);
+    sampler->register_last_resource(__grove_m5unit_env2_sampler_read_temperature_humid, class_ptr, grove_name);
+    sampler->register_last_resource(__grove_m5unit_env2_sampler_read_humidity, class_ptr, grove_name);
+    sampler->register_last_resource(__grove_m5unit_env2_sampler_read_altitude, class_ptr, grove_name);
+}

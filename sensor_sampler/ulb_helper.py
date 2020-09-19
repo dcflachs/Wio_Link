@@ -8,6 +8,7 @@ import time
 import argparse
 import requests
 import json
+import re
 
 parser = argparse.ArgumentParser()
 parser.add_argument("operate", help="get,set,ota")
@@ -39,9 +40,25 @@ if args.operate == 'set':
     files = [f for f in listdir('./') if isfile(join('./', f))]
     payload = {}
     for file_name in files:
-        if '.h' in file_name or '.cpp' in file_name:
+        if ('.h' in file_name or '.cpp' in file_name) and not ('grove' in file_name):
+            print(file_name)
             with open(file_name, 'r') as f:
                 payload[file_name] = f.read()
+
+    reg_inc = re.compile('(?#include )grove.*.h')
+    with open("./Main.cpp", 'r') as f:
+        for line in f:
+            match = re.search(reg_inc, line)
+            if match and isfile(join('./', match.group(0))):
+                file_name = match.group(0)
+                print(file_name)
+                with open(file_name, 'r') as f:
+                    payload[file_name] = f.read()
+
+                file_name = re.sub('.h', '.cpp', file_name)
+                with open(file_name, 'r') as f:
+                    payload[file_name] = f.read()
+                print(file_name)
 
     print(payload)
     print('\n')

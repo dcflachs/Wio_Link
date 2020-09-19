@@ -18,3 +18,10 @@ void __grove_moisture_sampler_read_moisture(void * class_ptr)
         wio.postEvent("sensor_sampler_status", "failed");
     }
 }
+
+void __grove_moisture_sampler_register(void * sampler_ptr, void * class_ptr, char * grove_name)
+{
+    SensorSampler *sampler = (SensorSampler *)sampler_ptr;
+
+    sampler->register_start_resource(__grove_moisture_sampler_read_moisture, class_ptr, grove_name);
+}
