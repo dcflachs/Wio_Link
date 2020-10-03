@@ -8,7 +8,7 @@ void __grove_temp_1wire_sampler_read_temp(void * class_ptr)
     GroveTemp1Wire *grove = (GroveTemp1Wire *)class_ptr;
     float temperature;
 
-    wio.postEvent("sensor_sampler_function", "temperature");
+    wio.postEvent("sensor_sampler_function", "temp");
     if(grove->read_temp(&temperature))
     {
         wio.postEvent("sensor_sampler_value", temperature);
