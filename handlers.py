@@ -1389,6 +1389,8 @@ class FirmwareBuildingHandler(NodeBaseHandler):
         if 0 in build_phase:
             #Clean Build Directory
             rmtree('%s/'%user_build_dir)
+            self.resp(200,meta={'ota_status': "idle", "ota_msg": "Clear Complete"})
+            return
         if 1 in build_phase:
             if self.request.headers.get("content-type") and self.request.headers.get("content-type").find("json") > 0:
                 #try json first
