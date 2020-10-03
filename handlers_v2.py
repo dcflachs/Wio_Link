@@ -49,7 +49,7 @@ class V2HandlersState():
 
 
 class V2Listener():
-    EVENT_QUEUE_LENGTH = 50
+    EVENT_QUEUE_LENGTH = 1000
 
     def __init__(self, state, cur, conns):
         self.db_cur = cur
