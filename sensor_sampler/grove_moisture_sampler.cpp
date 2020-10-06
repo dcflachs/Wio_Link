@@ -1,5 +1,5 @@
 #include "grove_moisture_sampler.h"
-#include "grove_moisture.h"
+#include "grove_moisture_class.h"
 #include "sensor_sampler.h"
 #include "wio.h"
 
