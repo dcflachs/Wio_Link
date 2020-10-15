@@ -16,7 +16,7 @@ parser.add_argument("domain", help="domain of the server, e.g. https://us.wio.se
 parser.add_argument("access_token", help="the access token of this board")
 args = parser.parse_args()
 
-if args.operate not in ['get', 'set', 'ota', 'get-config', 'clear', 'set-config', 'pause_sampling']:
+if args.operate not in ['get', 'set', 'ota', 'get-config', 'clear', 'set-config', 'pause_sampling', 'patch']:
     print('invalid operation - {}!'.format(args.operate))
     sys.exit(1)
 
@@ -156,3 +156,67 @@ if args.operate == 'pause_sampling':
         print('HTTP post failed, status code: {}'.format(r.status_code))
         print('Error message: {}'.format(r.text))
         sys.exit(1)
+
+if args.operate == 'patch':
+    print('=> Patching Files...')
+    if not isfile("Main.cpp") or not isfile("Main.h"):
+        sys.exit(1)
+    
+    with open("Main.cpp", 'r') as f:
+        data = f.readlines()
+
+    for line in data:
+        if "sensor_sampler.h" in line:
+            print("Error: Already Patched File!")
+            sys.exit(1)
+    
+    regex_inc = re.compile("(.*(grove_.*))_gen.*")
+    regex_var = re.compile("extern (.*) \*((Grove.*)_ins)")
+    includes = []
+    vars = []
+    with open("Main.h", 'r') as f:
+        for line in f:
+            m = regex_inc.search(line)
+            if m:
+                includes.append(m)
+            else:
+               m = regex_var.search(line)
+               if m:
+                   vars.append(m)
+
+    out_data = []
+    state = 0
+    for line in data:
+        out_data.append(line)
+        if (state == 0) and "Main.h" in line:
+            out_data.append("#include \"sensor_sampler.h\"\n")
+            for item in includes:
+                out_data.append("{}_sampler.h\"\n".format(item.group(1)))
+            out_data.append("\n")
+            out_data.append("SensorSampler *SensorSampler_ins;\n")
+            out_data.append("\n")
+            state = 1
+            continue
+        if (state == 1) and "void setup()" in line:
+            state = 2
+            continue
+        if (state == 2) and "{" in line:
+            out_data.append("\tSensorSampler_ins = new SensorSampler();\n")
+            out_data.append("\n")
+            for item in vars:
+                func = None
+                name = item.group(1).lower()
+                for m in includes:
+                    if name in m.group(2).replace('_',''):
+                        func = "__{}_sampler_register".format(m.group(2))
+                        break
+                if func:
+                    out_data.append("\t{}(SensorSampler_ins, {}, \"{}\");\n".format(func, item.group(2), item.group(3)))
+            out_data.append("\n")
+            out_data.append("\tSensorSampler_ins->start_sampling();\n")
+            state = 3 
+            continue
+
+    with open("Main.cpp", 'w') as f:
+        f.writelines(out_data)
+    print('=> Complete')
