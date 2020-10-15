@@ -16,7 +16,7 @@ parser.add_argument("domain", help="domain of the server, e.g. https://us.wio.se
 parser.add_argument("access_token", help="the access token of this board")
 args = parser.parse_args()
 
-if args.operate not in ['get', 'set', 'ota', 'get-config', 'clear', 'set-config']:
+if args.operate not in ['get', 'set', 'ota', 'get-config', 'clear', 'set-config', 'pause_sampling']:
     print('invalid operation - {}!'.format(args.operate))
     sys.exit(1)
 
@@ -140,6 +140,16 @@ if args.operate == 'set-config':
 if args.operate == 'clear':
     print('=> Posting contents...')
     r = requests.post('{}/v1/ota/trigger?access_token={}&build_phase=0'.format(args.domain.rstrip('/'), args.access_token), verify=False)
+    if r.status_code == 200:
+        print('=> Success!')
+    else:
+        print('HTTP post failed, status code: {}'.format(r.status_code))
+        print('Error message: {}'.format(r.text))
+        sys.exit(1)
+
+if args.operate == 'pause_sampling':
+    print('=> Setting allow sleep...')
+    r = requests.post('{}/v2/node/variable/allow_sleep/0?access_token={}'.format(args.domain.rstrip('/'), args.access_token), verify=False)
     if r.status_code == 200:
         print('=> Success!')
     else:
