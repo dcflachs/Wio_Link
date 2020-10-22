@@ -19,6 +19,12 @@ typedef struct sample_resource_s
     struct sample_resource_s  *next;
 }sample_resource_t;
 
+typedef struct sampler_rtc_mem_s
+{
+    uint32_t sentinel;
+    uint32_t last_uptime;
+}sampler_rtc_mem_t;
+
 class SensorSampler
 {
 public:
@@ -41,7 +47,11 @@ private:
     sample_resource_t * p_last_resource;
     sample_resource_t * p_current_resource;
     void register_resource(sampler_func_t func, void * class_ptr, char * grove_name, bool last);
+    
+    sampler_rtc_mem_t rtc_mem;
+
     bool ready_sleep;
+    uint8_t pre_sleep_counter;
 };
 
 #endif
