@@ -19,7 +19,7 @@ extern "C"
 #define SENSOR_SAMPLER_START_DELAY_MS 4000
 #define SENSOR_SAMPLER_SAMPLE_DELAY_MS 100
 #define SENSOR_SAMPLER_PRE_SLEEP_DELAY_MS 300
-#define SENSOR_SAMPLER_SLEEP_DELAY_MS 10
+#define SENSOR_SAMPLER_SLEEP_DELAY_MS 100
 #define SENSOR_SAMPLER_SLEEP_SPIN_MAX 50
 
 #define SENSOR_SAMPLER_SAMPLE_TIME_S 900 //15 min
@@ -72,6 +72,8 @@ void SensorSampler::start_sampling(void)
         this->p_current_resource = this->p_first_resource;
         suli_soft_timer_install(this->timer, SENSOR_SAMPLER_START_DELAY_MS, timer_handler, this, true);
         wio.postEvent("Sensor Sampler State", "Start");
+        if(this->rtc_mem.last_uptime != 0)
+            wio.postEvent("sensor_sampler_uptime", this->rtc_mem.last_uptime);
     }
 }
 
@@ -90,12 +92,12 @@ void SensorSampler::sample(void)
         if(this->p_current_resource == this->p_first_resource)
         {
             suli_soft_timer_control_interval(this->timer, SENSOR_SAMPLER_SAMPLE_DELAY_MS);
+            // wio.postEvent("DEBUG", 0);
         }
         
         if(this->p_current_resource == this->p_last_resource)
         {
-            if(this->rtc_mem.last_uptime != 0)
-                wio.postEvent("sensor_sampler_uptime", this->rtc_mem.last_uptime);
+            // wio.postEvent("DEBUG", 1);
 
             suli_soft_timer_control_interval(this->timer, SENSOR_SAMPLER_PRE_SLEEP_DELAY_MS);
             bool arg_pack[2] = {false, false};
@@ -108,6 +110,7 @@ void SensorSampler::sample(void)
     {   
         if(!(this->ready_sleep))
         {
+            // wio.postEvent("DEBUG", 2);
             suli_soft_timer_control_interval(this->timer, SENSOR_SAMPLER_SLEEP_DELAY_MS);
             this->ready_sleep = true;
             // wio.postEvent("sensor_sampler_current_uptime", (uint32_t)millis());

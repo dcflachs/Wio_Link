@@ -4,6 +4,7 @@
 import sys
 from os import listdir
 from os.path import isfile, join
+from shutil import copyfile
 import time
 import argparse
 import requests
@@ -11,9 +12,9 @@ import json
 import re
 
 parser = argparse.ArgumentParser()
-parser.add_argument("operate", help="get,set,ota")
 parser.add_argument("domain", help="domain of the server, e.g. https://us.wio.seeed.io")
 parser.add_argument("access_token", help="the access token of this board")
+parser.add_argument("operate", help="get,set,ota")
 args = parser.parse_args()
 
 if args.operate not in ['get', 'set', 'ota', 'get-config', 'clear', 'set-config', 'pause_sampling', 'patch']:
@@ -31,6 +32,9 @@ if args.operate == 'get':
             with open(file_name, 'w') as f:
                 f.write(file_contents)
         print('=> Saved into files')
+
+        if not isfile('./Main.cpp') and isfile('../Main.cpp.template'):
+            copyfile('../Main.cpp.template', './Main.cpp')
     else:
         print('HTTP get failed, status code: {}'.format(r.status_code))
         print('Error message: {}'.format(r.text))
