@@ -5,6 +5,10 @@ on:
     branches: [ api-dev ]
   pull_request:
     branches: [ api-dev ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image Tag'
 
 jobs:
 
