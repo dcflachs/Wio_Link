@@ -22,6 +22,18 @@ jobs:
         id: date
         run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
       
+      - name: Get Git SHA
+        id: sha
+        shell: bash
+        run: |
+          echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+      
+      - name: Show Git Run Info
+        run: |
+          echo "Branch: ${{ steps.sha.outputs.branch }}"
+          echo "Sha: ${{ steps.sha.outputs.sha_short }}"
+      
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       
@@ -43,9 +55,12 @@ jobs:
           file: ./Dockerfile
           platforms: ${{github.event.inputs.platform}}
           push: false
+          labels: |
+            `org.opencontainers.image.revision=${{ steps.sha.outputs.sha_short }}`
           tags: |
             dcflachs/wio_link:test
             dcflachs/wio_link:nightly-${{ steps.date.outputs.date }}
+            dcflachs/wio_link:sha-${{ steps.sha.outputs.sha_short }}
 
       - name: Build and push
         id: docker_build
@@ -57,6 +72,9 @@ jobs:
 #           platforms: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64
           platforms: linux/amd64,linux/arm/v6
           push: true
+          labels: |
+            `org.opencontainers.image.revision=${{ steps.sha.outputs.sha_short }}`
           tags: |
             dcflachs/wio_link:latest
             dcflachs/wio_link:nightly-${{ steps.date.outputs.date }}
+            dcflachs/wio_link:sha-${{ steps.sha.outputs.sha_short }}
