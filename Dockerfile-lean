@@ -11,6 +11,7 @@ RUN pip install pycrypto
 RUN pip install PyYaml
 RUN pip install tornado-cors
 RUN pip install psutil
+RUN pip install requests
 
 #add the files into image
 RUN mkdir -p /root/wio
