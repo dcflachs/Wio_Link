@@ -54,7 +54,7 @@ import json
 import hashlib
 import hmac
 import binascii
-import requests
+# import requests
 import re
 from Crypto.Cipher import AES
 from Crypto import Random
