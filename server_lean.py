@@ -73,7 +73,7 @@ from tornado.queues import Queue
 from tornado.locks import Semaphore, Condition
 from tornado_cors import CorsMixin
 
-
+from handlers_v2 import *
 
 define("mode", default="online", help="Running mode, online: will fetch node info from OTA server at start up.")
 
@@ -862,32 +862,55 @@ def fetch_node_info():
 
     return True
 
+def get_ota_server_type():
+    ota_server = os.environ.get('WIO_LINK_OTA_SERVER')
+    if not ota_server:
+        ota_server = OTA_SERVER
+    
+    return ota_server
+
 def get_ota_server_addr():
-    ota_server_addr = CUSTOM_OTA_SERVER_ADDR
-    if OTA_SERVER == 'chinese':
+    ota_server_addr = os.environ.get('WIO_LINK_OTA_SERVER_ADDR')
+    if not ota_server_addr:
+        ota_server_addr = CUSTOM_OTA_SERVER_ADDR
+        
+    ota_server = get_ota_server_type()
+    
+    if ota_server == 'chinese':
         ota_server_addr = 'https://cn.wio.seeed.io'
-    elif OTA_SERVER == 'global_old':
+    elif ota_server == 'global_old':
         ota_server_addr = 'https://iot.seeed.cc'
-    elif OTA_SERVER == 'global_new':
+    elif ota_server == 'global_new':
         ota_server_addr = 'https://us.wio.seeed.io'
 
     return ota_server_addr
     
 def get_all_token():
     ota_server_addr = get_ota_server_addr()
+    ota_server = get_ota_server_type()
     
     token_list = []
-    if OTA_SERVER != "customize":
-        token_list = TOKENS
+    if ota_server != "customize":
+        token_list = os.environ.get('WIO_LINK_TOKEN_LIST')
+        if token_list:
+            token_list = json.loads(token_list)
+        else:
+            token_list = TOKENS
     else:
         gen_log.info("Fetching all token...")
         
-        if len(ACCOUNTS) == 0:
+        accounts = os.environ.get('WIO_LINK_ACCOUNTS')
+        if accounts:
+            accounts = json.loads(accounts)
+        else:
+            accounts = ACCOUNTS
+        
+        if len(accounts) == 0:
             gen_log.error("Please configure the user account!!!")
             return False
 
-        for a in ACCOUNTS:
-            acc = {'email':a, 'password': ACCOUNTS[a]}
+        for a in accounts:
+            acc = {'email':a, 'password': accounts[a]}
             login_result_obj = {'token':'', }
             try:
                 r = requests.post(ota_server_addr.rstrip('/')+'/v1/user/login', data=acc, verify=False)
@@ -941,18 +964,20 @@ def main():
             gen_log.info('load nodes database from json done!')
             gen_log.debug(NODES_DATABASE)
 
+    app_port = os.environ.get('WIO_LINK_APP_PORT',8080)
+    tcp_xchange_port = 8000
 
     app = myApplication()
     http_server = HTTPServer(app)
-    http_server.listen(8080)
+    http_server.listen(app_port)
 
 
     tcp_server = DeviceServer()
-    tcp_server.listen(8000)
+    tcp_server.listen(tcp_xchange_port )
 
     mode = 'online' if options.mode == 'online' else 'offline'
     gen_log.info("Server's running in %s mode ..." % mode)
-    gen_log.info('To use this server, please configure the "Exchange" server to http://your-ip-address:8080 in app.')
+    gen_log.info('To use this server, please configure the "Exchange" server to http://your-ip-address:%s in app.' % app_port)
 
     ioloop.IOLoop.current().start()
 
