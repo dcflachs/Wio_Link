@@ -1,0 +1,27 @@
+FROM debian
+MAINTAINER dcflachs
+
+#install required packages
+RUN apt-get update && \
+    apt-get install -qqy --force-yes wget openssl python-dev python-pip supervisor vim git
+    
+RUN pip install 'tornado<5'
+RUN pip install PyJWT
+RUN pip install pycrypto
+RUN pip install PyYaml
+RUN pip install tornado-cors
+RUN pip install psutil
+
+#add the files into image
+RUN mkdir -p /root/wio
+WORKDIR /root/wio
+COPY . /root/wio
+
+#config supervisor
+RUN mv ./wio_server-lean.conf /etc/supervisor/conf.d/wio_server.conf
+RUN mkdir -p /root/supervisor_log
+
+#expose ports
+EXPOSE 8000 8080
+
+CMD /etc/init.d/supervisor start && /bin/bash
