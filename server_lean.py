@@ -29,21 +29,25 @@
 #
 #Set the OTA server which is used by the Wio Links
 #This script will connect to OTA server to fetch node informations.
-#Options: chinese, global_old, global_new, customize
+#Options: chinese, global_old, global_new, customize'
+#ENV WIO_LINK_OTA_SERVER
 OTA_SERVER='global_new'
 
 #Set the tokens when seeed server(chinese, global new and old),
 #Get token from https://wio.seeed.io/login
 #Note: all seeed server have same user token
-TOKENS = ["your token"]
+#ENV WIO_LINK_TOKEN_LIST
+TOKENS = None #["your token"]
 
 #Set the address of the OTA server if OTA_SERVER is set to 'customize'
 #Only applies when OTA_SERVER='customize'
+#ENV WIO_LINK_OTA_SERVER_ADDR
 CUSTOM_OTA_SERVER_ADDR='http://192.168.x.x:8080'
 
 #Set the accounts which will be used when logging in the OTA server
 #Set each account with a key-value pair in which the pattern is email:password
-ACCOUNTS={'example@mail.com':'password'}
+#ENV WIO_LINK_ACCOUNTS
+ACCOUNTS = None #{'example@mail.com':'password'}
 
 ########################################
 
@@ -73,7 +77,7 @@ from tornado.queues import Queue
 from tornado.locks import Semaphore, Condition
 from tornado_cors import CorsMixin
 
-from handlers_v2 import *
+
 
 define("mode", default="online", help="Running mode, online: will fetch node info from OTA server at start up.")
 
@@ -890,20 +894,25 @@ def get_all_token():
     ota_server = get_ota_server_type()
     
     token_list = []
-    if ota_server != "customize":
+    if TOKENS != None:
+        token_list = TOKENS
+    elif 'WIO_LINK_TOKEN_LIST' in os.environ:
         token_list = os.environ.get('WIO_LINK_TOKEN_LIST')
         if token_list:
             token_list = json.loads(token_list)
         else:
-            token_list = TOKENS
+            token_list = []
     else:
         gen_log.info("Fetching all token...")
         
-        accounts = os.environ.get('WIO_LINK_ACCOUNTS')
-        if accounts:
-            accounts = json.loads(accounts)
-        else:
+        if ACCOUNTS != None:
             accounts = ACCOUNTS
+        else:
+            accounts = os.environ.get('WIO_LINK_ACCOUNTS')
+            if accounts:
+                accounts = json.loads(accounts)
+            else:
+                accounts = []
         
         if len(accounts) == 0:
             gen_log.error("Please configure the user account!!!")
