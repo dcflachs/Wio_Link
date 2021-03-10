@@ -53,15 +53,18 @@ ACCOUNTS = None #{'example@mail.com':'password'}
 
 
 from datetime import timedelta
+from datetime import datetime
 import os
 import json
 import hashlib
+import base64
 import hmac
 import binascii
 import requests
 import re
 from Crypto.Cipher import AES
 from Crypto import Random
+import collections
 
 from tornado.httpserver import HTTPServer
 from tornado.tcpserver import TCPServer
@@ -498,9 +501,6 @@ class DeviceServer(TCPServer):
         except:
             pass
 
-
-
-
 class NodeBaseHandler(CorsMixin, web.RequestHandler):
     CORS_ORIGIN = '*'
     CORS_HEADERS = 'Content-Type'
@@ -817,7 +817,7 @@ class V2HandlersState():
         self.v2_listener = V2Listener(self, tokens, conns)
 
 class V2Listener():
-    EVENT_QUEUE_LENGTH = os.getenv('WIO_LINK_V2_EVENT_QUEUE_LENGTH', 1000)
+    EVENT_QUEUE_LENGTH = int(os.getenv('WIO_LINK_V2_EVENT_QUEUE_LENGTH', 1000))
 
     def __init__(self, state, tokens, conns):
         self.tokens = tokens
@@ -833,6 +833,7 @@ class V2Listener():
         event_q = CoEventBus().listener('/event/users/{}'.format(user_id)).create_queue()
         while True:
             event = yield event_q.get()
+            # gen_log.info("V2Listener WellKnown event: %s" % (event))
             if (event and 
                 event["event_type"] == "stat" and 
                 event["event_data"]["online"] and 
@@ -852,26 +853,28 @@ class V2Listener():
     @gen.coroutine
     def attempt_request(self, uri, node_sn, conns, name):
         result_ok = False
-        if node_sn in conns:
-            conn = conns[node_sn]
-            for x in range(3):
-                if not conn.killed:
-                    try:
-                        cmd = "GET /%s\r\n"%(uri)
-                        cmd = cmd.encode("ascii")
-                        ok, resp = yield conn.submit_and_wait_resp (cmd, "resp_get", 3)
-                        if ok:
-                            if 'msg' in resp and type(resp['msg']) == dict:
-                                resp['msg']['name'] = name
-                                resp['msg']['timestamp'] = datetime.now().isoformat()
-                        if not ('status' in resp and resp['status'] != 200):
-                            self.v2_state.well_known[node_sn] = resp['msg']
-                            result_ok = True
-                            break
-                    except web.HTTPError:
-                        pass
-                    except Exception, e:
-                        gen_log.error(e)
+        for conn in self.conns:
+            if conn.sn == node['node_sn'] and not conn.killed:
+                # gen_log.info('V2 attempt request found node in conns: {}'.format(node_sn))
+                for x in range(3):
+                    if not conn.killed:
+                        try:
+                            cmd = "GET /%s\r\n"%(uri)
+                            cmd = cmd.encode("ascii")
+                            ok, resp = yield conn.submit_and_wait_resp (cmd, "resp_get", 3)
+                            if ok:
+                                if 'msg' in resp and type(resp['msg']) == dict:
+                                    resp['msg']['name'] = name
+                                    resp['msg']['timestamp'] = datetime.now().isoformat()
+                            if not ('status' in resp and resp['status'] != 200):
+                                self.v2_state.well_known[node_sn] = resp['msg']
+                                result_ok = True
+                                break
+                        except web.HTTPError, e:
+                            gen_log.info(e)
+                            pass
+                        except Exception, e:
+                            gen_log.info(e)
         raise gen.Return(result_ok)
 
     @gen.coroutine
@@ -903,22 +906,22 @@ class V2Listener():
     @gen.coroutine
     def post (self, uri, node_sn, conns):
         result_ok = False
-        if node_sn in self.conns:
-            conn = conns[node_sn]
-            for x in range(10):
-                if not conn.killed:
-                    try:
-                        ok, resp = yield conn.submit_and_wait_resp(uri, "resp_post", 1)
-                        if not ('status' in resp and resp['status'] != 200):
-                            result_ok = True
-                            break
-                        if 'status' in resp and resp['status'] == 404:
-                            gen_log.info('INFO: V2 post to {} failed 404'.format(uri))
-                            break
-                    except web.HTTPError:
-                        pass
-                    except Exception,e:
-                        gen_log.error(e)
+        for conn in self.conns:
+            if conn.sn == node['node_sn'] and not conn.killed:
+                for x in range(10):
+                    if not conn.killed:
+                        try:
+                            ok, resp = yield conn.submit_and_wait_resp(uri, "resp_post", 1)
+                            if not ('status' in resp and resp['status'] != 200):
+                                result_ok = True
+                                break
+                            if 'status' in resp and resp['status'] == 404:
+                                gen_log.info('INFO: V2 post to {} failed 404'.format(uri))
+                                break
+                        except web.HTTPError:
+                            pass
+                        except Exception,e:
+                            gen_log.error(e)
         raise gen.Return(result_ok)
 
     @gen.coroutine
@@ -977,9 +980,8 @@ class NodeV2WellKnownHandler(NodeBaseHandler):
     @gen.coroutine
     def attempt_request(self, uri, node_sn):
         result_ok = False
-        if node_sn in self.conns:
-            conn = self.conns[node_sn]
-            if not conn.killed:
+        for conn in self.conns:
+            if conn.sn == node['node_sn'] and not conn.killed:
                 try:
                     cmd = "GET /%s\r\n"%(uri)
                     cmd = cmd.encode("ascii")
@@ -1048,9 +1050,8 @@ class NodeV2WriteHandler(NodeBaseHandler):
         cmd = cmd.encode("ascii")
 
         #Post the request directly
-        if node_sn in self.conns:
-            conn = self.conns[node_sn]
-            if not conn.killed:
+        for conn in self.conns:
+            if conn.sn == node['node_sn'] and not conn.killed:
                 try:
                     ok, resp = yield conn.submit_and_wait_resp(cmd, "resp_post")
                     if 'status' in resp and resp['status'] == 404:
@@ -1188,7 +1189,7 @@ class myApplication(web.Application):
             (r"/v2/node/event/(?=pop|length|clear)(.+)", NodeV2EventsHandler, dict(conns=DeviceServer.accepted_xchange_conns, state_waiters=DeviceConnection.state_waiters, state_happened=DeviceConnection.state_happened, state_cached=self.v2_state)),
             ]
 
-        web.Application.__init__(self, handlers, debug=False)
+        web.Application.__init__(self, handlers, debug=False, template_path='templates', websocket_ping_interval=30)
 
 
 def fetch_node_info():
