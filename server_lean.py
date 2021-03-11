@@ -854,7 +854,7 @@ class V2Listener():
     def attempt_request(self, uri, node_sn, conns, name):
         result_ok = False
         for conn in self.conns:
-            if conn.sn == node['node_sn'] and not conn.killed:
+            if conn.sn == node_sn and not conn.killed:
                 # gen_log.info('V2 attempt request found node in conns: {}'.format(node_sn))
                 for x in range(3):
                     if not conn.killed:
@@ -907,7 +907,7 @@ class V2Listener():
     def post (self, uri, node_sn, conns):
         result_ok = False
         for conn in self.conns:
-            if conn.sn == node['node_sn'] and not conn.killed:
+            if conn.sn == node_sn and not conn.killed:
                 for x in range(10):
                     if not conn.killed:
                         try:
@@ -944,6 +944,7 @@ class NodeV2WellKnownHandler(NodeBaseHandler):
         self.state_waiters = state_waiters
         self.state_happened = state_happened
         self.node_responses = state_cached.well_known
+        self.failure_reason = ""
 
     @gen.coroutine
     def pre_request(self, req_type, uri):
@@ -981,7 +982,7 @@ class NodeV2WellKnownHandler(NodeBaseHandler):
     def attempt_request(self, uri, node_sn):
         result_ok = False
         for conn in self.conns:
-            if conn.sn == node['node_sn'] and not conn.killed:
+            if conn.sn == node_sn and not conn.killed:
                 try:
                     cmd = "GET /%s\r\n"%(uri)
                     cmd = cmd.encode("ascii")
@@ -1005,6 +1006,7 @@ class NodeV2WriteHandler(NodeBaseHandler):
         self.state_waiters = state_waiters
         self.state_happened = state_happened
         self.write_cache = state_cached.write_cache
+        self.failure_reason = ""
 
     @gen.coroutine
     def pre_request(self, req_type, uri):
@@ -1051,7 +1053,7 @@ class NodeV2WriteHandler(NodeBaseHandler):
 
         #Post the request directly
         for conn in self.conns:
-            if conn.sn == node['node_sn'] and not conn.killed:
+            if conn.sn == node_sn and not conn.killed:
                 try:
                     ok, resp = yield conn.submit_and_wait_resp(cmd, "resp_post")
                     if 'status' in resp and resp['status'] == 404:
@@ -1089,6 +1091,7 @@ class NodeV2EventsHandler(NodeBaseHandler):
         self.state_waiters = state_waiters
         self.state_happened = state_happened
         self.events_cache = state_cached.events_cache
+        self.failure_reason = ""
 
     # Handles GET /v2/node/event/pop
     #         GET /v2/node/event/length
