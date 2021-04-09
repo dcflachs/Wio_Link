@@ -35,8 +35,8 @@ bool __plugin_pm_sleep(void *class_ptr, char *method_name, void *input_pack)
     memcpy(&sec, arg_ptr, sizeof(uint32_t)); arg_ptr += sizeof(uint32_t);
 
     Serial1.printf("deep sleep %lu sec\r\n", sec);
-    writer_print(TYPE_STRING, "\"ok, deep sleep\"");
-    response_msg_close(STREAM_DATA);
+    // writer_print(TYPE_STRING, "\"ok, deep sleep\"");
+    // response_msg_close(STREAM_DATA);
 
     //turn off grove's power
     digitalWrite(SWITCH_GROVE_POWER, 0);
